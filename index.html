@@ -622,12 +622,18 @@
                             <video id="videoFeed" width="100%"
                                 style="border-radius: 8px; background: black; max-width:400px; display:block; margin: 0 auto;"
                                 autoplay playsinline muted></video>
-                            <button type="button"
-                                style="margin-top:12px; background:#10B981; color:white; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer;"
-                                onclick="snapPhoto()"><i class="fas fa-camera"></i> Capture Snap</button>
-                            <button type="button"
-                                style="margin-top:12px; background:#EF4444; color:white; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer; margin-left: 8px;"
-                                onclick="stopCamera()">Cancel</button>
+                            <div
+                                style="margin-top: 12px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                                <button type="button"
+                                    style="background:#10B981; color:white; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer;"
+                                    onclick="snapPhoto()"><i class="fas fa-camera"></i> Capture Snap</button>
+                                <button type="button"
+                                    style="background:#3B82F6; color:white; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer;"
+                                    onclick="flipCamera()"><i class="fas fa-sync-alt"></i> Flip</button>
+                                <button type="button"
+                                    style="background:#EF4444; color:white; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer;"
+                                    onclick="stopCamera()">Cancel</button>
+                            </div>
                         </div>
 
                         <!-- Frozen Snapshot Preview -->
@@ -711,10 +717,20 @@
         // CAMERA STATE GLOBALS
         let liveStream = null;
         let capturedBlob = null;
+        let currentFacingMode = "user"; // "user" for front, "environment" for back
 
         function clearCam() {
             capturedBlob = null;
             document.getElementById("canvasPreview").style.display = "none";
+        }
+
+        async function flipCamera() {
+            currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+            if (liveStream) {
+                liveStream.getTracks().forEach(track => track.stop());
+                liveStream = null;
+            }
+            await startCamera();
         }
 
         async function startCamera() {
@@ -724,7 +740,7 @@
             capturedBlob = null; // reset if they restart cam
 
             try {
-                liveStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                liveStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } });
                 video.srcObject = liveStream;
             } catch (err) {
                 alert("Camera access denied or unavailable.");
