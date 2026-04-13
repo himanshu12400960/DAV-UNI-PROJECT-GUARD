@@ -525,6 +525,8 @@
 
 <body>
 
+    var api = "https://0813-2401-4900-858a-ff8c-794e-14a5-6da9-adeb.ngrok-free.app";
+    
     <nav>
         <div class="nav-logos">
             <img src="https://davuniversity.org/src2/img/basic/logohead.png?v=1" class="logo-crest" alt="DAV Crest">
@@ -817,8 +819,8 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting...`;
 
-            // Setup API
-            const NODE_API_URL = "  https://1ccf-2409-40d1-149f-2398-2534-f9a2-4cab-d141.ngrok-free.app/api/visitors/register";
+            // Setup API (NOTE: If ngrok was restarted, this URL will change and return 404)
+            const NODE_API_URL = "${api}/api/visitors/register";
 
             try {
                 const canvas = document.getElementById("canvasPreview");
@@ -833,7 +835,13 @@
                 fd.append("description", description);
                 fd.append("photo", capturedBlob, "webcam_snap.jpg");
 
-                const response = await fetch(NODE_API_URL, { method: "POST", body: fd });
+                const response = await fetch(NODE_API_URL, {
+                    method: "POST",
+                    body: fd,
+                    headers: {
+                        "ngrok-skip-browser-warning": "true"
+                    }
+                });
 
                 if (!response.ok) {
                     const errText = await response.text();
