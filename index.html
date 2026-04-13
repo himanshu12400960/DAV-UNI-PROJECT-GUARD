@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAV UniVisitor - Register</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -619,12 +620,13 @@
                         <!-- Live Camera Feed (Hidden by default) -->
                         <div id="cameraSetup"
                             style="display:none; text-align: center; background: #E2E8F0; padding: 12px; border-radius: 12px; margin-bottom: 12px;">
+                            <div id="faceStatus" style="font-size:13px; font-weight:bold; color:#F59E0B; margin-bottom:8px;"><i class="fas fa-spinner fa-spin"></i> Loading AI Face Detector...</div>
                             <video id="videoFeed" width="100%"
                                 style="border-radius: 8px; background: black; max-width:400px; display:block; margin: 0 auto;"
                                 autoplay playsinline muted></video>
                             <div
                                 style="margin-top: 12px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                                <button type="button"
+                                <button type="button" id="snapBtn"
                                     style="background:#10B981; color:white; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer;"
                                     onclick="snapPhoto()"><i class="fas fa-camera"></i> Capture Snap</button>
                                 <button type="button"
@@ -719,12 +721,42 @@
         let capturedBlob = null;
         let currentFacingMode = "user"; // "user" for front, "environment" for back
 
+        let faceModelsLoaded = false;
+        let faceDetectionInterval = null;
+
+        // Load models asynchronously
+        async function initFaceDetector() {
+            try {
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                faceModelsLoaded = true;
+                const status = document.getElementById("faceStatus");
+                if (status) status.innerHTML = `<i class="fas fa-info-circle"></i> Waiting for camera...`;
+            } catch(e) {
+                console.error("Face API failed to load", e);
+                const status = document.getElementById("faceStatus");
+                if (status) status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> AI Offline: Manual Capture Unlocked`;
+                faceModelsLoaded = "offline";
+                const snapBtn = document.getElementById("snapBtn");
+                if (snapBtn) {
+                    snapBtn.style.opacity = '1';
+                    snapBtn.style.pointerEvents = 'auto';
+                }
+            }
+        }
+        
+        window.addEventListener('load', initFaceDetector);
+
         function clearCam() {
             capturedBlob = null;
             document.getElementById("canvasPreview").style.display = "none";
         }
 
         async function flipCamera() {
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+            }
             currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
             if (liveStream) {
                 liveStream.getTracks().forEach(track => track.stop());
@@ -733,15 +765,87 @@
             await startCamera();
         }
 
+        function startFaceDetection(video) {
+            if (faceDetectionInterval) clearInterval(faceDetectionInterval);
+            
+            const status = document.getElementById("faceStatus");
+            const snapBtn = document.getElementById("snapBtn");
+            let frameMisses = 0;
+            
+            faceDetectionInterval = setInterval(async () => {
+                if (faceModelsLoaded !== true) return;
+                
+                try {
+                    const params = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.3 });
+                    const detection = await faceapi.detectSingleFace(video, params);
+                    
+                    if (detection) {
+                        frameMisses = 0;
+                        if (status) {
+                            status.innerHTML = `<i class="fas fa-check-circle"></i> Face Located!`;
+                            status.style.color = "#10B981";
+                        }
+                        if (snapBtn) {
+                            snapBtn.style.opacity = '1';
+                            snapBtn.style.pointerEvents = 'auto';
+                        }
+                    } else {
+                        frameMisses++;
+                        if (frameMisses > 2) {
+                            if (status) {
+                                status.innerHTML = `<i class="fas fa-search"></i> Looking for human face...`;
+                                status.style.color = "#EF4444";
+                            }
+                            if (snapBtn) {
+                                snapBtn.style.opacity = '0.5';
+                                snapBtn.style.pointerEvents = 'none';
+                            }
+                        }
+                    }
+                } catch(e) { }
+            }, 300);
+        }
+
         async function startCamera() {
             const video = document.getElementById("videoFeed");
             document.getElementById("cameraSetup").style.display = "block";
             document.getElementById("canvasPreview").style.display = "none";
             capturedBlob = null; // reset if they restart cam
 
+            const snapBtn = document.getElementById("snapBtn");
+            const status = document.getElementById("faceStatus");
+
+            if (faceModelsLoaded === "offline") {
+                if (status) {
+                    status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> AI Offline: Manual Capture Unlocked`;
+                    status.style.color = "#EF4444";
+                }
+                if (snapBtn) {
+                    snapBtn.style.opacity = '1';
+                    snapBtn.style.pointerEvents = 'auto';
+                }
+            } else {
+                if (snapBtn) {
+                    snapBtn.style.opacity = '0.5';
+                    snapBtn.style.pointerEvents = 'none';
+                }
+                if (status) {
+                    if (!faceModelsLoaded) {
+                        status.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading AI Face Detector...`;
+                        status.style.color = "#F59E0B";
+                    } else {
+                        status.innerHTML = `<i class="fas fa-search"></i> Looking for human face...`;
+                        status.style.color = "#EF4444";
+                    }
+                }
+            }
+
             try {
                 liveStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } });
                 video.srcObject = liveStream;
+                video.onplay = () => {
+                    startFaceDetection(video);
+                };
             } catch (err) {
                 alert("Camera access denied or unavailable.");
                 document.getElementById("cameraSetup").style.display = "none";
@@ -767,10 +871,16 @@
         }
 
         function stopCamera() {
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+            }
             if (liveStream) {
                 liveStream.getTracks().forEach(track => track.stop());
                 liveStream = null;
             }
+            const status = document.getElementById("faceStatus");
+            if (status) status.innerHTML = "";
             document.getElementById("cameraSetup").style.display = "none";
         }
 
