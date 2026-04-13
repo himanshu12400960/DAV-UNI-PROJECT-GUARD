@@ -525,8 +525,6 @@
 
 <body>
 
-    var api = "https://0813-2401-4900-858a-ff8c-794e-14a5-6da9-adeb.ngrok-free.app";
-    
     <nav>
         <div class="nav-logos">
             <img src="https://davuniversity.org/src2/img/basic/logohead.png?v=1" class="logo-crest" alt="DAV Crest">
@@ -820,7 +818,8 @@
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting...`;
 
             // Setup API (NOTE: If ngrok was restarted, this URL will change and return 404)
-            const NODE_API_URL = "${api}/api/visitors/register";
+            const api = "https://0813-2401-4900-858a-ff8c-794e-14a5-6da9-adeb.ngrok-free.app";
+            const NODE_API_URL = `${api}/api/visitors/register`;
 
             try {
                 const canvas = document.getElementById("canvasPreview");
