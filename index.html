@@ -620,7 +620,9 @@
                         <!-- Live Camera Feed (Hidden by default) -->
                         <div id="cameraSetup"
                             style="display:none; text-align: center; background: #E2E8F0; padding: 12px; border-radius: 12px; margin-bottom: 12px;">
-                            <div id="faceStatus" style="font-size:13px; font-weight:bold; color:#F59E0B; margin-bottom:8px;"><i class="fas fa-spinner fa-spin"></i> Loading AI Face Detector...</div>
+                            <div id="faceStatus"
+                                style="font-size:13px; font-weight:bold; color:#F59E0B; margin-bottom:8px;"><i
+                                    class="fas fa-spinner fa-spin"></i> Loading AI Face Detector...</div>
                             <video id="videoFeed" width="100%"
                                 style="border-radius: 8px; background: black; max-width:400px; display:block; margin: 0 auto;"
                                 autoplay playsinline muted></video>
@@ -732,7 +734,7 @@
                 faceModelsLoaded = true;
                 const status = document.getElementById("faceStatus");
                 if (status) status.innerHTML = `<i class="fas fa-info-circle"></i> Waiting for camera...`;
-            } catch(e) {
+            } catch (e) {
                 console.error("Face API failed to load", e);
                 const status = document.getElementById("faceStatus");
                 if (status) status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> AI Offline: Manual Capture Unlocked`;
@@ -744,7 +746,7 @@
                 }
             }
         }
-        
+
         window.addEventListener('load', initFaceDetector);
 
         function clearCam() {
@@ -767,18 +769,18 @@
 
         function startFaceDetection(video) {
             if (faceDetectionInterval) clearInterval(faceDetectionInterval);
-            
+
             const status = document.getElementById("faceStatus");
             const snapBtn = document.getElementById("snapBtn");
             let frameMisses = 0;
-            
+
             faceDetectionInterval = setInterval(async () => {
                 if (faceModelsLoaded !== true) return;
-                
+
                 try {
                     const params = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.3 });
                     const detection = await faceapi.detectSingleFace(video, params);
-                    
+
                     if (detection) {
                         frameMisses = 0;
                         if (status) {
@@ -802,7 +804,7 @@
                             }
                         }
                     }
-                } catch(e) { }
+                } catch (e) { }
             }, 300);
         }
 
@@ -928,7 +930,7 @@
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting...`;
 
             // Setup API (NOTE: If ngrok was restarted, this URL will change and return 404)
-            const api = "https://0813-2401-4900-858a-ff8c-794e-14a5-6da9-adeb.ngrok-free.app";
+            const api = "https://8753-2401-4900-8313-c936-41c5-c010-b9e7-a044.ngrok-free.app";
             const NODE_API_URL = `${api}/api/visitors/register`;
 
             try {
