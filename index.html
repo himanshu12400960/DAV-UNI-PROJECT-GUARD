@@ -968,25 +968,7 @@
                 const data = await response.json();
                 console.log("✅ API Response:", data);
 
-                // Date-based sequential PIN: DDMMYYYY-001, 002, ...
-                function generateDatePin() {
-                    const now = new Date();
-                    const dd = String(now.getDate()).padStart(2, '0');
-                    const mm = String(now.getMonth() + 1).padStart(2, '0');
-                    const yyyy = now.getFullYear();
-                    const dateStr = `${dd}${mm}${yyyy}`;
-
-                    const stored = JSON.parse(localStorage.getItem("davPinCounter") || "{}");
-                    let count = 1;
-                    if (stored.date === dateStr) {
-                        count = (stored.count || 0) + 1;
-                    }
-                    localStorage.setItem("davPinCounter", JSON.stringify({ date: dateStr, count }));
-
-                    return `${dateStr}${String(count).padStart(3, '0')}`;
-                }
-
-                // Try server PIN first, fallback to date-based sequential
+                // Robust PIN Extraction
                 const findPin = (obj) => {
                     if (!obj || typeof obj !== 'object') return null;
                     for (const key of ["pin", "PIN", "visitorPin", "otp", "code"]) {
@@ -1003,7 +985,7 @@
 
                 let finalPin = findPin(data);
                 if (!finalPin || String(finalPin).length < 4) {
-                    finalPin = generateDatePin();
+                    finalPin = String(Math.floor(100000 + Math.random() * 900000));
                 }
 
                 let apiId = data.id || data._id || data.data?.id || data.data?._id || data.visitor?.id || data.visitor?._id || Date.now().toString();
