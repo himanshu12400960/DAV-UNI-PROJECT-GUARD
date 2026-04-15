@@ -566,6 +566,10 @@
                         <label for="contact">Contact Number *</label>
                         <input type="tel" placeholder="e.g. 9876543210" id="contact" required>
                     </div>
+                    <div class="form-group">
+                        <label for="vehicleNo">Vehicle No</label>
+                        <input type="text" placeholder="e.g. PB-08-AB-1234" id="vehicleNo">
+                    </div>
 
                     <!-- MODERIZED ELITE SELECT -->
                     <div class="form-group full-width">
@@ -582,8 +586,8 @@
                                     onclick="selectEliteOption('purpose', 'Admission Inquiry', 'Admission Inquiry', 'purposeDisplay', 'purposeOptions')">
                                     Admission Inquiry</div>
                                 <div class="elite-option"
-                                    onclick="selectEliteOption('purpose', 'University Event / Seminar', 'University Event / Seminar', 'purposeDisplay', 'purposeOptions')">
-                                    University Event / Seminar</div>
+                                    onclick="selectEliteOption('purpose', 'University Event / Seminar / Workshop / Expert Lecture', 'University Event / Seminar / Workshop / Expert Lecture', 'purposeDisplay', 'purposeOptions')">
+                                    University Event / Seminar / Workshop / Expert Lecture</div>
                                 <div class="elite-option"
                                     onclick="selectEliteOption('purpose', 'Other', 'Other', 'purposeDisplay', 'purposeOptions')">
                                     Other</div>
@@ -592,7 +596,7 @@
                                 <option value="">Select Purpose...</option>
                                 <option value="Meeting / Staff Interaction">Meeting / Staff Interaction</option>
                                 <option value="Admission Inquiry">Admission Inquiry</option>
-                                <option value="University Event / Seminar">University Event / Seminar</option>
+                                <option value="University Event / Seminar / Workshop / Expert Lecture">University Event / Seminar / Workshop / Expert Lecture</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
@@ -896,6 +900,7 @@
             const email = document.getElementById("email").value.trim();
             const address = document.getElementById("address").value.trim();
             const contact = document.getElementById("contact").value.trim();
+            const vehicleNo = document.getElementById("vehicleNo").value.trim();
             const purpose = document.getElementById("purpose").value;
             const description = document.getElementById("description").value;
 
@@ -942,6 +947,7 @@
                 fd.append("email", email);
                 fd.append("address", address);
                 fd.append("contact", contact);
+                fd.append("vehicleNo", vehicleNo);
                 fd.append("purpose", purpose);
                 fd.append("description", description);
                 fd.append("photo", capturedBlob, "webcam_snap.jpg");
@@ -962,7 +968,25 @@
                 const data = await response.json();
                 console.log("✅ API Response:", data);
 
-                // Robust PIN Extraction
+                // Date-based sequential PIN: DDMMYYYY-001, 002, ...
+                function generateDatePin() {
+                    const now = new Date();
+                    const dd = String(now.getDate()).padStart(2, '0');
+                    const mm = String(now.getMonth() + 1).padStart(2, '0');
+                    const yyyy = now.getFullYear();
+                    const dateStr = `${dd}${mm}${yyyy}`;
+
+                    const stored = JSON.parse(localStorage.getItem("davPinCounter") || "{}");
+                    let count = 1;
+                    if (stored.date === dateStr) {
+                        count = (stored.count || 0) + 1;
+                    }
+                    localStorage.setItem("davPinCounter", JSON.stringify({ date: dateStr, count }));
+
+                    return `${dateStr}${String(count).padStart(3, '0')}`;
+                }
+
+                // Try server PIN first, fallback to date-based sequential
                 const findPin = (obj) => {
                     if (!obj || typeof obj !== 'object') return null;
                     for (const key of ["pin", "PIN", "visitorPin", "otp", "code"]) {
@@ -979,14 +1003,14 @@
 
                 let finalPin = findPin(data);
                 if (!finalPin || String(finalPin).length < 4) {
-                    finalPin = String(Math.floor(100000 + Math.random() * 900000));
+                    finalPin = generateDatePin();
                 }
 
                 let apiId = data.id || data._id || data.data?.id || data.data?._id || data.visitor?.id || data.visitor?._id || Date.now().toString();
 
                 // Save to Queue
                 const queueItem = {
-                    name, email, address, contact, purpose, description,
+                    name, email, address, contact, vehicleNo, purpose, description,
                     photo: base64DataUrl,
                     id: String(apiId),
                     pin: finalPin,
