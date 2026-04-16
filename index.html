@@ -570,6 +570,10 @@
                         <label for="vehicleNo">Vehicle No</label>
                         <input type="text" placeholder="e.g. PB-08-AB-1234" id="vehicleNo">
                     </div>
+                    <div class="form-group">
+                        <label for="membersCount">Members with Visitor *</label>
+                        <input type="number" placeholder="e.g. 2" id="membersCount" min="0" required>
+                    </div>
 
                     <!-- MODERIZED ELITE SELECT -->
                     <div class="form-group full-width">
@@ -596,7 +600,8 @@
                                 <option value="">Select Purpose...</option>
                                 <option value="Meeting / Staff Interaction">Meeting / Staff Interaction</option>
                                 <option value="Admission Inquiry">Admission Inquiry</option>
-                                <option value="University Event / Seminar / Workshop / Expert Lecture">University Event / Seminar / Workshop / Expert Lecture</option>
+                                <option value="University Event / Seminar / Workshop / Expert Lecture">University Event
+                                    / Seminar / Workshop / Expert Lecture</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
@@ -901,10 +906,11 @@
             const address = document.getElementById("address").value.trim();
             const contact = document.getElementById("contact").value.trim();
             const vehicleNo = document.getElementById("vehicleNo").value.trim();
+            const membersCount = document.getElementById("membersCount").value.trim();
             const purpose = document.getElementById("purpose").value;
             const description = document.getElementById("description").value;
 
-            if (name === "" || email === "" || contact === "") {
+            if (name === "" || email === "" || address === "" || contact === "" || membersCount === "" || purpose === "" || description === "") {
                 alert("Please fill all required fields!");
                 return;
             }
@@ -935,8 +941,12 @@
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting...`;
 
             // Setup API (NOTE: If ngrok was restarted, this URL will change and return 404)
-            const api = "https://8753-2401-4900-8313-c936-41c5-c010-b9e7-a044.ngrok-free.app";
+            const api = "https://3e77-2409-40d1-100f-e478-e825-6609-8a59-4b77.ngrok-free.app";
             const NODE_API_URL = `${api}/api/visitors/register`;
+
+            // Abort fetch after 30 seconds to prevent infinite loading
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
 
             try {
                 const canvas = document.getElementById("canvasPreview");
@@ -947,7 +957,8 @@
                 fd.append("email", email);
                 fd.append("address", address);
                 fd.append("contact", contact);
-                fd.append("vehicleNo", vehicleNo);
+                fd.append("vehicleNumber", vehicleNo);
+                fd.append("members", membersCount);
                 fd.append("purpose", purpose);
                 fd.append("description", description);
                 fd.append("photo", capturedBlob, "webcam_snap.jpg");
@@ -955,6 +966,7 @@
                 const response = await fetch(NODE_API_URL, {
                     method: "POST",
                     body: fd,
+                    signal: controller.signal,
                     headers: {
                         "ngrok-skip-browser-warning": "true"
                     }
@@ -992,7 +1004,7 @@
 
                 // Save to Queue
                 const queueItem = {
-                    name, email, address, contact, vehicleNo, purpose, description,
+                    name, email, address, contact, vehicleNo, membersCount, purpose, description,
                     photo: base64DataUrl,
                     id: String(apiId),
                     pin: finalPin,
@@ -1016,8 +1028,13 @@
                 submitBtn.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Registration Failed`;
                 submitBtn.style.background = "#EF4444";
 
-                alert("Could not connect to the registration server. Please check your connection.");
+                if (error.name === 'AbortError') {
+                    alert("Request timed out. The server took too long to respond. Please try again.");
+                } else {
+                    alert("Could not connect to the registration server. Please check your connection.\n\nError: " + error.message);
+                }
             } finally {
+                clearTimeout(timeoutId);
                 submitBtn.disabled = false;
                 if (!submitBtn.style.background.includes("EF4444")) {
                     submitBtn.innerHTML = `<i class="fas fa-paper-plane"></i> Submit Registration`;
@@ -1030,6 +1047,11 @@
             form.reset();
             // Reset Elite selects display
             document.getElementById("purposeDisplay").innerText = "Select Purpose...";
+            document.getElementById("purposeDisplay").style.color = "";
+            document.getElementById("purposeDisplay").style.fontWeight = "";
+            // Clear captured photo
+            capturedBlob = null;
+            document.getElementById("canvasPreview").style.display = "none";
         }
 
         function renderRecentEntries() {
